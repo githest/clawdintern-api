@@ -7,7 +7,7 @@ from datetime import datetime
 app = Flask(__name__)
 CORS(app)
 
-MEMORY_FILE = Path.home() / '.clawdintern_memory.json'
+MEMORY_FILE = Path(__file__).parent / '.clawdintern_memory.json'
 
 def load_memory():
     with open(MEMORY_FILE) as f:
