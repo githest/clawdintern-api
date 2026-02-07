@@ -6,6 +6,7 @@ from supabase import create_client
 from datetime import datetime
 
 app = Flask(__name__)
+CORS(app)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 MEMORY_FILE = Path(__file__).parent / 'memory.json'
