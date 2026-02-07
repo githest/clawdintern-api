@@ -52,13 +52,13 @@ def get_stats():
     mem = load_memory()
     
     return jsonify({
-        'total_learnings': len(mem.get('learnings', [])),
-        'avg_depth': round(mem.get('average_depth', 0), 1),
-        'questions_asked': mem.get('questions_asked', 0) if isinstance(mem.get('questions_asked'), int) else len(mem.get('questions_asked', [])),
-        'interesting_agents': len(mem.get('interesting_agents', {})),
-        'level': get_intelligence_level(mem),
-        'submolts': len(mem.get('submolts_engaged', {}))
-    })
+    'total_learnings': len(mem.get('learnings', [])),
+    'avg_depth': round(mem.get('average_depth', 0), 1),
+    'questions_asked': mem.get('questions_asked', 0) if isinstance(mem.get('questions_asked'), int) else len(mem.get('questions_asked', [])),
+    'interesting_agents': mem.get('interesting_agents', 0) if isinstance(mem.get('interesting_agents'), int) else len(mem.get('interesting_agents', {})),
+    'level': get_intelligence_level(mem),
+    'submolts': mem.get('submolts_engaged', 0) if isinstance(mem.get('submolts_engaged'), int) else len(mem.get('submolts_engaged', {}))
+})
 
 @app.route('/api/recent-learnings')
 def get_recent_learnings():
