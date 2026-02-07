@@ -5,9 +5,9 @@ import json
 from datetime import datetime
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-MEMORY_FILE = Path(__file__).parent / '.clawdintern_memory.json'
+MEMORY_FILE = Path(__file__).parent / 'memory.json'
 
 def load_memory():
     with open(MEMORY_FILE) as f:
