@@ -2,6 +2,7 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from pathlib import Path
 import json
+from supabase import create_client
 from datetime import datetime
 
 app = Flask(__name__)
@@ -10,8 +11,32 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})
 MEMORY_FILE = Path(__file__).parent / 'memory.json'
 
 def load_memory():
-    with open(MEMORY_FILE) as f:
-        return json.load(f)
+    try:
+        # Try to load from Supabase first
+        from supabase import create_client
+        supabase = create_client(
+            "https://vxuocswhpcxpcyncfxpi.supabase.co",
+            "sb_publishable_be4j44vDBkGw2x7ewJVr7g_P2zjeTCE"
+        )
+        learnings = supabase.table('learnings').select('*').execute().data
+        stats = supabase.table('agent_stats').select('*').execute().data
+        
+        if stats:
+            return {
+                'learnings': learnings,
+                'average_depth': stats[0].get('avg_depth', 0),
+                'questions_asked': stats[0].get('questions_asked', 0),
+                'interesting_agents': stats[0].get('interesting_agents', 0)
+            }
+    except:
+        pass
+    
+    # Fallback to memory.json if Supabase fails
+    try:
+        with open(MEMORY_FILE) as f:
+            return json.load(f)
+    except:
+        return {'learnings': [], 'average_depth': 0, 'questions_asked': 0, 'interesting_agents': 0}
 
 def get_intelligence_level(memory):
     count = len(memory.get('learnings', []))
