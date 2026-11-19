@@ -4,21 +4,37 @@ from pathlib import Path
 import json
 from supabase import create_client
 from datetime import datetime
+import os
+import time
 
 app = Flask(__name__)
-CORS(app)
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+# Public, read-only API: any site may read it, but only with GET.
+CORS(app, resources={r"/api/*": {"origins": "*", "methods": ["GET"]}})
+
+# The publishable key is designed to be public. Its safety depends entirely on
+# Row Level Security being ON for the learnings and agent_stats tables.
+SUPABASE_URL = os.getenv("SUPABASE_URL", "https://vxuocswhpcxpcyncfxpi.supabase.co")
+SUPABASE_PUBLISHABLE_KEY = os.getenv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_be4j44vDBkGw2x7ewJVr7g_P2zjeTCE")
+
+# Cache memory for a short time so traffic to this API cannot be used to
+# hammer the database (every request used to pull the whole learnings table).
+CACHE_SECONDS = 60
+_cache = {"at": 0.0, "data": None}
 
 MEMORY_FILE = Path(__file__).parent / 'memory.json'
 
 def load_memory():
+    now = time.time()
+    if _cache["data"] is not None and now - _cache["at"] < CACHE_SECONDS:
+        return _cache["data"]
+    data = _load_memory_uncached()
+    _cache["data"], _cache["at"] = data, now
+    return data
+
+def _load_memory_uncached():
     try:
         # Try to load from Supabase first
-        from supabase import create_client
-        supabase = create_client(
-            "https://vxuocswhpcxpcyncfxpi.supabase.co",
-            "sb_publishable_be4j44vDBkGw2x7ewJVr7g_P2zjeTCE"
-        )
+        supabase = create_client(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY)
         learnings = supabase.table('learnings').select('*').execute().data
         stats = supabase.table('agent_stats').select('*').execute().data
         
@@ -29,7 +45,7 @@ def load_memory():
                 'questions_asked': stats[0].get('questions_asked', 0),
                 'interesting_agents': stats[0].get('interesting_agents', 0)
             }
-    except:
+    except Exception:
         pass
     
     # Fallback to memory.json if Supabase fails
@@ -135,4 +151,7 @@ def get_network_data():
     })
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # Local development only. Production runs under gunicorn (see Procfile).
+    # Never enable debug on a public server: the Werkzeug debugger allows
+    # remote code execution.
+    app.run(host='127.0.0.1', port=int(os.getenv('PORT', '5000')), debug=False)
